@@ -26,7 +26,6 @@ cat > "$ENGAGEMENT_DIR/engagement.json" <<EOF
   "primary_domain": "$DOMAIN",
   "slug": "$SLUG",
   "start_date": "$(date -Iseconds)",
-  "analyst": "${USER:-unknown}",
   "engagement_dir": "$ENGAGEMENT_DIR",
   "phase_status": {
     "0_setup": "complete",

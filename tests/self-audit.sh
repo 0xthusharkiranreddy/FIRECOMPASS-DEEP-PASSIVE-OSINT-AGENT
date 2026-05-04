@@ -57,6 +57,9 @@ check "at least 5 sources queried per root" "find $ENGAGEMENT_DIR/subdomains -mi
 echo "[Phase 4] JS / source mining"
 check "js_filtered.txt exists" "[ -f $ENGAGEMENT_DIR/subdomains/js_filtered.txt ]"
 
+echo "[Phase 4.5] Public web asset reading"
+check "web_assets/findings.tsv exists" "[ -f $ENGAGEMENT_DIR/web_assets/findings.tsv ]"
+
 echo "[Phase 5] Google / Bing dorking"
 check "dork_urls.txt exists" "[ -f $ENGAGEMENT_DIR/subdomains/dork_urls.txt ]"
 
@@ -66,6 +69,11 @@ check "shodan_hostnames.txt exists" "[ -f $ENGAGEMENT_DIR/subdomains/shodan_host
 echo "[Phase 7] DNS resolve + HTTP probe"
 check "resolved_hosts.txt non-empty" "[ -s $ENGAGEMENT_DIR/resolved/resolved_hosts.txt ]"
 check "live/probed.tsv non-empty" "[ -s $ENGAGEMENT_DIR/live/probed.tsv ]"
+
+echo "[Phase 7.5] DNS records + tech fingerprint"
+check "dns_records.tsv exists" "[ -f $ENGAGEMENT_DIR/ips/dns_records.tsv ]"
+check "spf_third_parties.txt exists" "[ -f $ENGAGEMENT_DIR/ips/spf_third_parties.txt ]"
+check "tech_fingerprint.tsv exists" "[ -f $ENGAGEMENT_DIR/live/tech_fingerprint.tsv ]"
 
 echo "[Phase 8] Pattern permutation"
 if [ -s "$ENGAGEMENT_DIR/seeds/wildcard_roots.txt" ]; then
