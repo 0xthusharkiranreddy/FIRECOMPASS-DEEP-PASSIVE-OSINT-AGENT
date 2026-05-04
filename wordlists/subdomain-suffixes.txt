@@ -1,0 +1,77 @@
+# Suffix patterns appended to discovered prefixes for pattern permutation
+# Add new patterns when discovered in engagements
+# Format: one suffix per line, no leading dot, lowercase
+#
+# Web tier (most common — paired-tier failure mode, see LESSONS_LEARNED.md)
+web
+pweb
+webp
+sweb
+dweb
+vweb
+uweb
+app
+papp
+sapp
+dapp
+
+# Auth / Access tier
+oam
+poam
+doam
+voam
+uoam
+soam
+auth
+sso
+login
+ad
+adfs
+
+# Environment qualifiers
+prod
+pprod
+prd
+sprd
+dev
+sdev
+uat
+suat
+stage
+sstage
+test
+qa
+sit
+preprod
+preprd
+
+# Single letter qualifiers
+p
+s
+d
+v
+u
+t
+q
+
+# Numeric qualifiers
+01
+02
+03
+1
+2
+3
+
+# Generic functional
+api
+internal
+external
+public
+private
+admin
+mgmt
+mgr
+console
+portal
+gateway
+proxy

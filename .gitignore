@@ -1,0 +1,36 @@
+# Engagement data — never commit client data
+engagements/
+**/probed.tsv
+**/resolved_*.txt
+**/all_master.txt
+**/seed_roots.txt
+**/wildcard_roots.txt
+*.log
+*.pcap
+*.json.bak
+
+# Sensitive
+.env
+*.key
+*.pem
+api_keys.txt
+hibp_*.json
+dehashed_*.json
+intelx_*.json
+hunter_*.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Editor
+.vscode/
+.idea/
