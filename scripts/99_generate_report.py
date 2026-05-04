@@ -28,6 +28,15 @@ def safe_read(p, default=""):
     return p.read_text() if p.exists() else default
 
 
+# Load the decision_log.md, target visualisation, and strategic narrative
+DECISION_LOG_PATH = ENG / "reports" / "decision_log.md"
+TARGET_VIS_PATH   = ENG / "reports" / "target_visualisation.md"
+STRATEGIC_PATH    = ENG / "reports" / "strategic_narrative.md"
+DECISION_LOG      = safe_read(DECISION_LOG_PATH,   default="")
+TARGET_VIS        = safe_read(TARGET_VIS_PATH,     default="")
+STRATEGIC         = safe_read(STRATEGIC_PATH,      default="")
+
+
 def safe_lines(p):
     return [l.strip() for l in safe_read(p).splitlines() if l.strip()]
 
@@ -146,6 +155,26 @@ with open(report, "w") as f:
             f.write(f"{w}\n")
         f.write("```\n\n")
 
+    # ---------- Target Visualisation (Phase 0.5) ----------
+    if TARGET_VIS.strip():
+        f.write("---\n\n## 1.5 Target Visualisation — Mental Model Built Before Any Tool Ran\n\n")
+        f.write("This is the agent's pre-engagement understanding of the target. The reviewer reads this first to verify the agent's mental model matches reality. Tool output downstream is interpreted through this lens.\n\n")
+        f.write("---\n\n")
+        f.write(TARGET_VIS)
+        f.write("\n\n---\n\n")
+    else:
+        f.write("\n> ⚠️ **Target visualisation missing.** Phase 0.5 should have produced `reports/target_visualisation.md`. Without it, the reviewer cannot audit whether the agent built a correct mental model before running tools. Re-run with Phase 0.5 enforced.\n\n")
+
+    # ---------- Strategic Narrative ----------
+    if STRATEGIC.strip():
+        f.write("---\n\n## 1.7 Strategic Narrative — The Campaign Story\n\n")
+        f.write("This is the agent's field-journal-style account of the engagement. Read this BEFORE the per-phase findings to understand the shape of the recon — where I expected to find things, where I was surprised, what shifted my approach, and what I'd do differently with more time.\n\n")
+        f.write("---\n\n")
+        f.write(STRATEGIC)
+        f.write("\n\n---\n\n")
+    else:
+        f.write("\n> ⚠️ **Strategic narrative missing.** Agent should write to `reports/strategic_narrative.md` before generating final report. Without it, the report reads like tool output instead of senior-pentester field notes. Re-run with strategic narrative enforced.\n\n")
+
     # ---------- methodology table ----------
     f.write("""---
 
@@ -189,6 +218,17 @@ Every phase below is cited to a HackTricks / PayloadsAllTheThings file path. No 
         f.write(f"| {root} | {', '.join(sources) if sources else '—'} | {agg} |\n")
 
     f.write(f"\n**Cross-source aggregate (master):** {len(all_subs)} unique candidates\n\n")
+
+    # ---------- DECISION LOG (the heart of reviewability) ----------
+    if DECISION_LOG.strip():
+        f.write("---\n\n## 3.X Decision Log — Full Reasoning Chain\n\n")
+        f.write("This section is the agent's audit trail. Every decision, every alternative considered, every dead end documented, every self-critique. The reviewer reads this to verify the agent's thinking matches an expert hacker's thinking.\n\n")
+        f.write("**If a senior pentester reads this and thinks 'yes, that's how I'd think — what this missed, I'd also miss in 60 minutes' — the agent earned trust.**\n\n")
+        f.write("---\n\n")
+        f.write(DECISION_LOG)
+        f.write("\n\n---\n\n")
+    else:
+        f.write("\n> ⚠️ **Decision log missing.** Agent should write to `reports/decision_log.md` throughout the engagement. Without this, the report cannot be reviewed for reasoning quality. Re-run with decision logging enabled.\n\n")
 
     # ---------- live hosts ----------
     f.write("---\n\n## 4. Live Hosts — HTTP Status Distribution\n\n")
@@ -269,10 +309,53 @@ Every phase below is cited to a HackTricks / PayloadsAllTheThings file path. No 
                 f.write(f"{e}\n")
             f.write("```\n")
 
-    # ---------- audit ----------
+    # ---------- gap analysis (what was NOT found) ----------
     f.write(f"""\n---
 
-## 10. Methodology Self-Audit
+## 9.5 Gap Analysis — What Was NOT Found (and why this is also meaningful)
+
+A passive recon is only as trustworthy as its documented gaps. The reviewer needs to know:
+- Which sources we queried that returned 0 results, and *why* — was it a real "no data" or a tooling failure?
+- Which permutation patterns we tested that didn't hit — proves we tried before declaring a gap
+- Which methods we deliberately did NOT run, and what API key / permission / scope decision drove that
+
+A "0 results" with diagnosis is a finding. It tells the reviewer: *we looked, there's nothing there, you don't have to re-run this.*
+
+[Agent must populate this from the decision_log.md "Dead Ends Documented" and "What I Ruled Out" entries. If this section is empty after generation, the decision log was not maintained — recon is incomplete.]
+
+---
+
+## 10. Coverage Self-Assessment Matrix
+
+Agent's own confidence rating per category. Reviewer compares this against their expert intuition.
+
+| Category | Confidence (1-10) | Justification | What Would Push This Higher |
+|----------|-------------------|---------------|-----------------------------|
+| Subdomain coverage on non-wildcard roots | _agent fills_ | _agent fills_ | _agent fills_ |
+| Subdomain coverage on wildcard roots | _agent fills_ | _agent fills_ | _agent fills_ |
+| Related domain discovery | _agent fills_ | _agent fills_ | _agent fills_ |
+| IP / ASN coverage | _agent fills_ | _agent fills_ | _agent fills_ |
+| Open ports (passive) | _agent fills_ | _agent fills_ | _agent fills_ |
+| Leaked credentials | _agent fills_ | _agent fills_ | _agent fills_ |
+| Cloud bucket discovery | _agent fills_ | _agent fills_ | _agent fills_ |
+| GitHub / source leaks | _agent fills_ | _agent fills_ | _agent fills_ |
+| Email harvesting | _agent fills_ | _agent fills_ | _agent fills_ |
+
+**Overall confidence:** _agent fills with overall score and justification_
+
+---
+
+## 11. What An Expert Manual Analyst Would Also Do (self-critique)
+
+Agent's honest list of things a senior pentester would do that this engagement did NOT cover.
+
+[Agent populates from decision_log "What an Expert Would Also Do" entries — aggregated across all 14 phases.]
+
+The reviewer judges agent trustworthiness by reading this section. If a "NOT DONE" item exists for something the reviewer thinks should have been done, they push back and we add it to the pipeline. That's how the methodology improves.
+
+---
+
+## 12. Methodology Self-Audit
 
 This report was generated only after `tests/self-audit.sh` passed all checks. Each phase produced a verifiable output file. If any phase produced no output, this report would have failed to generate.
 

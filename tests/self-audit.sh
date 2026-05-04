@@ -30,6 +30,20 @@ echo "[Phase 0] Engagement setup"
 check "engagement.json exists" "[ -f $ENGAGEMENT_DIR/engagement.json ]"
 check "seeds/ exists" "[ -d $ENGAGEMENT_DIR/seeds ]"
 
+echo "[Phase 0.5] Target visualisation (mandatory)"
+check "target_visualisation.md exists" "[ -s $ENGAGEMENT_DIR/reports/target_visualisation.md ]"
+check "target_visualisation has industry classification" "grep -qi 'industry' $ENGAGEMENT_DIR/reports/target_visualisation.md"
+check "target_visualisation has expected asset categories" "grep -qiE 'expected asset|asset class' $ENGAGEMENT_DIR/reports/target_visualisation.md"
+
+echo "[Decision Log + Strategic Narrative — reviewability artefacts]"
+check "decision_log.md exists" "[ -s $ENGAGEMENT_DIR/reports/decision_log.md ]"
+check "decision_log has Hypothesis blocks" "grep -ciE '^### Hypothesis' $ENGAGEMENT_DIR/reports/decision_log.md | awk '\$1>=10'"
+check "decision_log has 'What I Ruled Out' entries" "grep -ciE 'Ruled Out' $ENGAGEMENT_DIR/reports/decision_log.md | awk '\$1>=10'"
+check "decision_log has 'Expert Would Also Do' critiques" "grep -ciE 'Expert Would Also Do' $ENGAGEMENT_DIR/reports/decision_log.md | awk '\$1>=10'"
+check "decision_log has self-confidence scores" "grep -ciE 'Self-confidence' $ENGAGEMENT_DIR/reports/decision_log.md | awk '\$1>=10'"
+check "strategic_narrative.md exists" "[ -s $ENGAGEMENT_DIR/reports/strategic_narrative.md ]"
+check "strategic_narrative has 'pivotal' or pivot decision" "grep -ciE 'pivot|pivotal' $ENGAGEMENT_DIR/reports/strategic_narrative.md | awk '\$1>=1'"
+
 echo "[Phase 1] Seed + related domain discovery"
 check "seed_roots.txt non-empty" "[ -s $ENGAGEMENT_DIR/seeds/seed_roots.txt ]"
 
