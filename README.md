@@ -196,31 +196,58 @@ Output lands in `/home/kali/engagements/<org-slug>-<date>/`.
 
 ---
 
-## The Engagement Log — Transparency That Survives Compaction
+## The Engagement Log — Full CLI Transcript On Disk
 
-Every engagement produces `$ENGAGEMENT_DIR/engagement_logs.md` — a real-time, append-only journal of everything that happens:
+Every engagement produces `$ENGAGEMENT_DIR/engagement_logs.md`. This is not a summary. It is a **complete verbatim transcript** of everything that appeared in the CLI — written to disk in real time throughout the engagement.
+
+**What it captures:**
+- Every explanation the agent wrote (`🤖 Agent` entries)
+- Every command that ran with its full output (`⚡ Command` entries)
+- Every file the agent read and what it observed (`📄 Read` entries)
+- Every checkpoint — what was shown, what the analyst said, what was decided (`🛑 Checkpoint` entries)
+- All severity-labelled findings (INFO / NOTABLE / HIGH / CRITICAL)
 
 ```markdown
-## Phase 3 — Multi-source Subdomain Enumeration
+---
+### 🤖 Agent — 2026-05-05 14:31:10
 
-**Timestamp:** 2026-05-05 14:32:11
+subfinder returned 89 results. crt.sh returned ZERO — but subfinder returned 89.
+This is a wildcard cert signal: crt.sh sees a single *.acme.com entry and returns
+nothing for individual subdomains. subfinder queries sources beyond crt.sh so it
+still sees hosts. Pivoting to check Phase 2 wildcard output now.
 
-**Hypothesis:** Expect 50-200 subdomains for an org this size.
-**Action:** subfinder + crt.sh + certspotter in parallel.
-**Falsifier:** If <20 results → wildcard cert likely; cross-check Phase 2 output.
-
-**Running:** subfinder passive enum
+---
+### ⚡ Command — 2026-05-05 14:31:15
+**Purpose:** Check Phase 2 wildcard detection output
 ```bash
-subfinder -d acme.com -all -silent
+cat $ENGAGEMENT_DIR/seeds/wildcard_roots.txt
+```
+**Output** (1 line):
+```
+acme-internal.com
 ```
 
-- `14:32:45` ℹ️  [INFO] subfinder returned 89 subdomains
-- `14:33:01` 🟡 **[NOTABLE]** Result count is LOW (89 < expected 150+) — cross-checking Phase 2 wildcard detection
-- `14:33:05` 🟠 **[HIGH]** Wildcard cert *.acme-internal.com confirmed — CT-log tools blind on this domain
-- `14:33:05` **Decision:** Prioritising Phase 8 pattern permutation on acme-internal.com before declaring enum complete
+---
+### 🤖 Agent — 2026-05-05 14:31:20
+
+Confirmed. acme-internal.com has a wildcard cert (*.acme-internal.com).
+CT-log tools cannot see individual SANs on this domain. This is why Phase 3
+returned 0 for acme-internal.com — it is not a methodology gap.
+Pivoting to Phase 8 pattern permutation on acme-internal.com now.
+
+---
+### 🛑 Checkpoint 2 — 2026-05-05 14:31:30
+**Presented to analyst:** Wildcard cert *.acme-internal.com found. CT-log
+tools are blind here. I have 0 results for this domain from Phase 3. I am
+pivoting to pattern permutation. Do you have any known hostnames under
+acme-internal.com from the client kickoff?
+
+**Analyst response:** "They mentioned webmail and sso in the kickoff call."
+
+**Decision:** Added webmail, sso as seed prefixes for Phase 8. Proceeding.
 ```
 
-Claude conversations get compacted — all reasoning visible in the terminal disappears from context. `engagement_logs.md` ensures nothing is lost: the analyst can open it at any time and see exactly what was done, why, and what was found.
+Claude conversations get compacted and the terminal history disappears. The log does not. The analyst can open it mid-engagement or weeks later and read exactly what happened, in order, with full context.
 
 ---
 
