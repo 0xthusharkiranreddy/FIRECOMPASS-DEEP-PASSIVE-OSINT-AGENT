@@ -13,7 +13,7 @@ The repo encodes:
 - **The wildcard-cert lesson** — `Phase 2` (wildcard detection) and `Phase 8` (pattern permutation) directly counter that failure
 - **A Claude Code agent** that orchestrates the phases automatically when invoked
 - **Phase scripts** that the agent uses as its execution layer
-- **A real-time engagement log** (`engagement_logs.md`) — every action, every finding, survives conversation compaction
+- **A real-time engagement log** (`engagement_logs.md`) — verbatim CLI transcript written to disk as it happens; survives conversation compaction; everything you see in the terminal is in this file
 - **A self-audit harness** — hard checks that fail the engagement if any phase was skipped
 
 ---
@@ -196,58 +196,118 @@ Output lands in `/home/kali/engagements/<org-slug>-<date>/`.
 
 ---
 
-## The Engagement Log — Full CLI Transcript On Disk
+## The Engagement Log — Your CLI Session, Saved To Disk
 
-Every engagement produces `$ENGAGEMENT_DIR/engagement_logs.md`. This is not a summary. It is a **complete verbatim transcript** of everything that appeared in the CLI — written to disk in real time throughout the engagement.
+### The short answer: yes, what you see in the CLI is what goes into the log.
 
-**What it captures:**
-- Every explanation the agent wrote (`🤖 Agent` entries)
-- Every command that ran with its full output (`⚡ Command` entries)
-- Every file the agent read and what it observed (`📄 Read` entries)
-- Every checkpoint — what was shown, what the analyst said, what was decided (`🛑 Checkpoint` entries)
-- All severity-labelled findings (INFO / NOTABLE / HIGH / CRITICAL)
+Every response the agent writes, every command that runs with its full output, every file the agent reads and interprets, every checkpoint exchange — all of it is written to `$ENGAGEMENT_DIR/engagement_logs.md` in real time as it happens.
 
-```markdown
+**Why this matters:** Claude Code conversations get compacted. When that happens, all the reasoning, all the command outputs, all the findings visible in your terminal disappear from context. The log is the permanent on-disk copy that survives compaction — you can open it during the engagement, after the engagement, or months later and read exactly what happened.
+
+---
+
+### How it works
+
+The agent writes to the log after every single action. There is no batch-at-end or summary mode — it writes as it goes. Four types of entries are written:
+
+| Entry type | Emoji | When written | What it contains |
+|---|---|---|---|
+| Agent response | `🤖` | After every message Claude writes | The full text verbatim — same as what you read in the terminal |
+| Command | `⚡` | Before + after every command runs | The command + its complete output (up to 200 lines, with pointer to full file) |
+| File read | `📄` | After every file the agent inspects | Which file, line count, and key observations — what it means, not just what it says |
+| Checkpoint | `🛑` | At every supervised pause | What the agent presented, your response, and the decision made |
+
+> **How the log is written:** The agent actively calls `log_agent_response()`, `log_cmd_with_output()`, `log_read_result()`, and `log_checkpoint()` from `scripts/lib/log.sh` after each action. It is not an automatic terminal hook — it is enforced by the agent prompt as a mandatory protocol. Rule 8 of the agent's hard rules states: *"If it happened and it's not in the log, it didn't happen."*
+
+---
+
+### What the log looks like
+
+```
 ---
 ### 🤖 Agent — 2026-05-05 14:31:10
 
-subfinder returned 89 results. crt.sh returned ZERO — but subfinder returned 89.
-This is a wildcard cert signal: crt.sh sees a single *.acme.com entry and returns
-nothing for individual subdomains. subfinder queries sources beyond crt.sh so it
-still sees hosts. Pivoting to check Phase 2 wildcard output now.
+Phase 3 subdomain enumeration complete. subfinder returned 89 hosts.
+crt.sh returned ZERO — but subfinder returned 89. This divergence is
+a wildcard cert signal: crt.sh sees a single *.acme.com entry and cannot
+enumerate individual subdomains. subfinder queries non-CT sources so it
+still sees hosts, which is why the counts differ.
+
+Checking Phase 2 wildcard output to confirm.
 
 ---
 ### ⚡ Command — 2026-05-05 14:31:15
-**Purpose:** Check Phase 2 wildcard detection output
-```bash
-cat $ENGAGEMENT_DIR/seeds/wildcard_roots.txt
-```
+**Purpose:** Confirm wildcard cert detection from Phase 2
+**Command:**
+    cat /home/kali/engagements/acme-corp-20260505/seeds/wildcard_roots.txt
 **Output** (1 line):
-```
-acme-internal.com
-```
+    acme-internal.com
 
 ---
-### 🤖 Agent — 2026-05-05 14:31:20
+### 🤖 Agent — 2026-05-05 14:31:22
 
-Confirmed. acme-internal.com has a wildcard cert (*.acme-internal.com).
-CT-log tools cannot see individual SANs on this domain. This is why Phase 3
-returned 0 for acme-internal.com — it is not a methodology gap.
-Pivoting to Phase 8 pattern permutation on acme-internal.com now.
+Confirmed. acme-internal.com has a wildcard cert. CT-log tools are blind
+to every subdomain under it. Phase 3 returning 0 for acme-internal.com
+is expected — not a gap in methodology.
+
+This is the same failure mode that hit the prior engagement. Phase 8
+(pattern permutation) on acme-internal.com is now the priority before
+I continue.
 
 ---
-### 🛑 Checkpoint 2 — 2026-05-05 14:31:30
-**Presented to analyst:** Wildcard cert *.acme-internal.com found. CT-log
-tools are blind here. I have 0 results for this domain from Phase 3. I am
-pivoting to pattern permutation. Do you have any known hostnames under
-acme-internal.com from the client kickoff?
+### 🛑 Checkpoint 2 — 2026-05-05 14:31:35
 
-**Analyst response:** "They mentioned webmail and sso in the kickoff call."
+**Presented to analyst:**
+Wildcard cert *.acme-internal.com detected (same scenario as the prior
+engagement). CT-log tools returned 0 subdomains for this domain. I am
+pivoting to Phase 8 pattern permutation using prefixes extracted from
+acme.com (dev, staging, vpn, mail...). Do you have any hostnames under
+acme-internal.com from the client kickoff that I should add as seeds?
 
-**Decision:** Added webmail, sso as seed prefixes for Phase 8. Proceeding.
+**Analyst response:** "Yes — they mentioned webmail and sso in the call."
+
+**Decision:** Added webmail, sso as confirmed seed prefixes for Phase 8
+permutation on acme-internal.com. These will anchor the pattern generation.
+Proceeding.
+
+---
+### ⚡ Command — 2026-05-05 14:32:00
+**Purpose:** Phase 8 — pattern permutation on acme-internal.com
+**Command:**
+    python3 scripts/08_pattern_permutation.py
+**Output** (14 lines):
+    webmail.acme-internal.com → 10.0.1.45 [LIVE]
+    sso.acme-internal.com → 10.0.1.50 [LIVE]
+    dev.acme-internal.com → 10.0.1.12 [LIVE]
+    staging.acme-internal.com → 10.0.1.13 [LIVE]
+    vpn.acme-internal.com → NXDOMAIN
+    mail.acme-internal.com → 10.0.1.5 [LIVE]
+    ...
+
+- `14:32:05` 🟠 [HIGH] 6 live hosts recovered under wildcard domain via permutation
 ```
 
-Claude conversations get compacted and the terminal history disappears. The log does not. The analyst can open it mid-engagement or weeks later and read exactly what happened, in order, with full context.
+The log reads as a continuous session transcript. No gaps between what you saw in the terminal and what is on disk.
+
+---
+
+### Recovering after compaction
+
+If your conversation is compacted mid-engagement, read the log to resume:
+
+```bash
+# Where you left off
+tail -80 $ENGAGEMENT_DIR/engagement_logs.md
+
+# What decisions were made
+grep "^### 🛑 Checkpoint" $ENGAGEMENT_DIR/engagement_logs.md
+
+# What commands ran
+grep "^### ⚡ Command" $ENGAGEMENT_DIR/engagement_logs.md
+
+# Critical findings
+grep "CRITICAL\|HIGH\]\|NOTABLE\]" $ENGAGEMENT_DIR/engagement_logs.md
+```
 
 ---
 
