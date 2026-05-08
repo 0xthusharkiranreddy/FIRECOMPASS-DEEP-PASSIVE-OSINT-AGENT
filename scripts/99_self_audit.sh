@@ -1,12 +1,12 @@
 #!/bin/bash
 # scripts/99_self_audit.sh — Mandatory pre-report completeness gate
 #
-# PURPOSE: Every gap in the example-org engagement was detectable in under 60 seconds
-# by running this script. The agent said "complete" without running these checks.
+# PURPOSE: Passive recon gaps are detectable in under 60 seconds by running this script.
+# Self-reported "complete" without machine verification has caused missed findings.
 # This script makes "complete" a machine-verified state, not a self-assessment.
 #
 # USAGE:
-#   export ENGAGEMENT_DIR=/home/kali/engagements/example-org-passive-recon
+#   export ENGAGEMENT_DIR=/home/kali/engagements/<org>-passive-recon
 #   bash scripts/99_self_audit.sh
 #
 # EXIT CODE: 0 = all checks passed. Non-zero = one or more checks FAILED.
@@ -80,7 +80,7 @@ else
     _pass "seeds/seed_roots.txt exists ($SEED_COUNT roots)"
 
     # Check: every root that appears in any subdomain source must be in seed_roots
-    # If we found subdomains for related-example.com but seed_roots only has example.com,
+    # If we found subdomains for related.example.com but seed_roots only has example.com,
     # the related-domain enumeration loop was incomplete.
     ALL_ROOTS_FOUND=$(find "$ENGAGEMENT_DIR/subdomains/" -mindepth 1 -maxdepth 1 -type d \
         | xargs -I{} basename {} 2>/dev/null | sort -u)
@@ -107,9 +107,9 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 _head "CHECK GROUP 3: Per-Source File Audit (0-result diagnosis)"
 # ─────────────────────────────────────────────────────────────────────────────
-# This is the exact failure mode from example-org: crtsh.txt was 0 (rate-limited),
-# otx.txt was 0, anubis.txt was 0 — none of these were diagnosed.
-# A 0-result file is only acceptable if the REASON is documented in decision_log.md.
+# Failure mode: crtsh.txt was 0 (rate-limited), otx.txt was 0, anubis.txt was 0
+# — none were diagnosed. A 0-result file is only acceptable if the REASON is
+# documented in decision_log.md.
 
 SOURCES=(subfinder assetfinder crtsh rapiddns urlscan wayback otx anubis hackertarget)
 
@@ -149,8 +149,8 @@ done < "$SEED_FILE"
 # ─────────────────────────────────────────────────────────────────────────────
 _head "CHECK GROUP 4: all_master.txt vs Individual Sources"
 # ─────────────────────────────────────────────────────────────────────────────
-# This caught the exchange.example.com gap: it was in rapiddns.txt but not
-# in all_master.txt because the dedup/merge step was run before rapiddns completed.
+# This catches the case where a subdomain appears in one per-source file but not
+# in all_master.txt — happens when the dedup/merge step ran before a source completed.
 
 MASTER="$ENGAGEMENT_DIR/subdomains/all_master.txt"
 if [ ! -f "$MASTER" ]; then
@@ -249,8 +249,8 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 _head "CHECK GROUP 7: Related Domain Enumeration Completeness"
 # ─────────────────────────────────────────────────────────────────────────────
-# The example-org gap: related-example.com, related-example.com, related-example.in were found in Phase 1
-# but their subdomain enumeration was either skipped or run with fewer sources.
+# Related domains found in Phase 1 (brand variants, subsidiaries) must have the
+# same subdomain enumeration depth as the primary domain — not skipped or partial.
 
 if [ -f "$SEED_FILE" ]; then
     PRIMARY_DOMAIN=$(head -1 "$SEED_FILE")
