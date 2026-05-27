@@ -1,4 +1,4 @@
-# FireCompass Deep Passive OSINT Agent
+#Deep Passive OSINT Agent
 
 > **Goal:** Map the complete external attack surface of any FireCompass POC client — subdomains, related domains, IPs, web applications — with **zero misses**. Every step is methodology-cited (HackTricks / PayloadsAllTheThings), hypothesis-driven, and reproducible.
 
